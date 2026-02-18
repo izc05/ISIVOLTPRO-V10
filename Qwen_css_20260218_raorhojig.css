@@ -1,0 +1,5 @@
+body { font-family: Arial, sans-serif; margin: 0; }
+.hidden { display: none; }
+.dark { background-color: #1a1a2e; color: #f0f0f0; }
+input, select { background: white; color: black; }
+.dark input, .dark select { background: #16213e; color: white; }

@@ -1,0 +1,5 @@
+1. En tu repositorio, ve a Settings
+2. Click en "Pages" (menú izquierdo)
+3. Branch: main → Folder: / → Save
+4. Espera 2 minutos
+5. Copia la URL que aparece

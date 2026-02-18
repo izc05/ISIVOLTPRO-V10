@@ -1,0 +1,8 @@
+1. Ve a github.com y crea cuenta si no tienes
+2. Click en "+" → "New repository"
+3. Nombre: IsiVoltPro-PWA
+4. ✅ Public
+5. Click "Create repository"
+6. Click "uploading an existing file"
+7. Arrastra los 6 archivos que creaste
+8. Click "Commit changes"
