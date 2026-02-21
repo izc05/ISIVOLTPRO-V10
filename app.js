@@ -1,6 +1,6 @@
 
 // =================== V2.1 IsiVolt Pro Legionella ===================
-// Login paco/1234, audio GDrive, todos los bugs corregidos, sonidos mejorados
+// Login configurable por el usuario, audio GDrive, todos los bugs corregidos, sonidos mejorados
 
 const SERVICE_CATALOG_V19 = [
   {id:"URGENCIAS", nombre:"UGC Urgencias"},
@@ -49,13 +49,28 @@ const $ = (id) => document.getElementById(id);
 
 // =================== LOGIN ===================
 const AUTH_KEY = "isivolt.auth";
-const DEFAULT_CREDENTIALS = { user: "paco", pass: "1234" };
+function normalizeCredentials(c){
+  if(!c || typeof c !== "object") return null;
+  const user = String(c.user || "").trim();
+  const pass = String(c.pass || "").trim();
+  if(!user || !pass) return null;
+  return { user, pass };
+}
 
 function getCredentials() {
-  try { const raw = localStorage.getItem(AUTH_KEY); return raw ? JSON.parse(raw) : { ...DEFAULT_CREDENTIALS }; }
-  catch { return { ...DEFAULT_CREDENTIALS }; }
+  try {
+    const raw = localStorage.getItem(AUTH_KEY);
+    if (!raw) return null;
+    return normalizeCredentials(JSON.parse(raw));
+  } catch {
+    return null;
+  }
 }
-function saveCredentials(c) { localStorage.setItem(AUTH_KEY, JSON.stringify(c)); }
+function saveCredentials(c) {
+  const clean = normalizeCredentials(c);
+  if (!clean) throw new Error("Credenciales inválidas");
+  localStorage.setItem(AUTH_KEY, JSON.stringify(clean));
+}
 function isLoggedIn() { return localStorage.getItem("isivolt.loggedIn") === "1"; }
 function setLoggedIn(val) { val ? localStorage.setItem("isivolt.loggedIn","1") : localStorage.removeItem("isivolt.loggedIn"); }
 
@@ -712,9 +727,24 @@ function init(){
   // ---- LOGIN ----
   $("btnLogin")?.addEventListener("click",()=>{
     const creds=getCredentials();
-    const u=($("loginUser")?.value||"").trim().toLowerCase();
+    const u=($("loginUser")?.value||"").trim();
     const p=($("loginPass")?.value||"").trim();
-    if(u===creds.user.toLowerCase()&&p===creds.pass){
+    if(!u||!p){
+      toast("Introduce usuario y contraseña.","warn","Acceso");
+      return;
+    }
+
+    if(!creds){
+      if(!confirm("No hay credenciales configuradas en este dispositivo. ¿Guardar estas como credenciales iniciales?")) return;
+      saveCredentials({ user: u, pass: p });
+      setLoggedIn(true);
+      playSoundLogin();
+      toast("Credenciales iniciales guardadas.","ok","Acceso");
+      if(!state.tech){show("profile");}else{show("home");refreshOT();}
+      return;
+    }
+
+    if(u.toLowerCase()===creds.user.toLowerCase()&&p===creds.pass){
       setLoggedIn(true); playSoundLogin();
       if(!state.tech){show("profile");}else{show("home");refreshOT();}
     }else{
@@ -729,6 +759,7 @@ function init(){
   // ---- CAMBIAR CONTRASEÑA ----
   $("btnChangePass")?.addEventListener("click",()=>{
     const creds=getCredentials();
+    if(!creds) return toast("No hay credenciales configuradas todavía.","warn","Seguridad");
     const oldPass=prompt("Contraseña actual:");if(oldPass==null) return;
     if(oldPass!==creds.pass) return toast("Contraseña actual incorrecta.","warn","Seguridad");
     const newUser=prompt("Nuevo usuario:",creds.user);if(newUser==null) return;
