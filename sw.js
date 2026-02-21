@@ -1,4 +1,4 @@
-const CACHE_NAME = "isivolt-legionella-v21-cache-1";
+const CACHE_NAME = "isivolt-legionella-v21-cache-2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -32,13 +32,25 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   if (url.hostname === "drive.google.com") return;
   if (url.origin !== self.location.origin) return;
+
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
     const cached = await cache.match(req);
-    const fetchPromise = fetch(req).then((res) => {
-      if (res && res.ok) cache.put(req, res.clone()).catch(()=>{});
+
+    try {
+      const res = await fetch(req);
+      if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
       return res;
-    }).catch(() => null);
-    return cached || (await fetchPromise) || cached;
+    } catch {
+      if (cached) return cached;
+      if (req.mode === "navigate") {
+        const appShell = await cache.match("./index.html");
+        if (appShell) return appShell;
+      }
+      return new Response("Sin conexión", {
+        status: 503,
+        headers: { "Content-Type": "text/plain; charset=utf-8" }
+      });
+    }
   })());
 });

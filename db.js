@@ -1,6 +1,19 @@
 const DB_NAME = "isivolt_legionella_v13";
 const DB_VER = 4;
 
+function requireNonEmptyString(value, field) {
+  const out = String(value ?? "").trim();
+  if (!out) throw new TypeError(`Campo inválido: ${field}`);
+  return out;
+}
+
+function requireObject(value, field) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError(`Objeto inválido: ${field}`);
+  }
+  return value;
+}
+
 function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VER);
@@ -36,21 +49,27 @@ function tx(db, storeName, mode="readonly") {
 }
 
 export async function dbPutOT(item){
+  const cleanItem = requireObject(item, "item");
+  requireNonEmptyString(cleanItem.key, "item.key");
+  requireNonEmptyString(cleanItem.tech, "item.tech");
+  requireNonEmptyString(cleanItem.date, "item.date");
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const store = tx(db, "ot", "readwrite");
-    const req = store.put(item);
+    const req = store.put(cleanItem);
     req.onsuccess = () => resolve(true);
     req.onerror = () => reject(req.error);
   });
 }
 
 export async function dbGetOTByTechDate(tech, date){
+  const cleanTech = requireNonEmptyString(tech, "tech");
+  const cleanDate = requireNonEmptyString(date, "date");
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const store = tx(db, "ot", "readonly");
     const idx = store.index("byTechDate");
-    const req = idx.getAll([tech, date]);
+    const req = idx.getAll([cleanTech, cleanDate]);
     req.onsuccess = () => resolve(req.result || []);
     req.onerror = () => reject(req.error);
   });
@@ -82,10 +101,12 @@ export async function dbDeleteOTKey(key){
 }
 
 export async function dbAddHistory(entry){
+  const cleanEntry = requireObject(entry, "entry");
+  requireNonEmptyString(cleanEntry.tech, "entry.tech");
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const store = tx(db, "history", "readwrite");
-    const req = store.add(entry);
+    const req = store.add(cleanEntry);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
@@ -107,10 +128,14 @@ export async function dbGetHistoryByTech(tech, limit=200){
 
 /* Monthly */
 export async function dbPutMonthly(item){
+  const cleanItem = requireObject(item, "item");
+  requireNonEmptyString(cleanItem.key, "item.key");
+  requireNonEmptyString(cleanItem.tech, "item.tech");
+  requireNonEmptyString(cleanItem.month, "item.month");
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const store = tx(db, "monthly", "readwrite");
-    const req = store.put(item);
+    const req = store.put(cleanItem);
     req.onsuccess = () => resolve(true);
     req.onerror = () => reject(req.error);
   });
@@ -143,11 +168,15 @@ export async function dbDeleteMonthlyByTechMonth(tech, month){
 }
 
 export async function dbPutMonthlyFile(tech, month, fileObj){
+  const cleanTech = requireNonEmptyString(tech, "tech");
+  const cleanMonth = requireNonEmptyString(month, "month");
+  const cleanFileObj = requireObject(fileObj, "fileObj");
+  if (!cleanFileObj.dataUrl) throw new TypeError("Campo inválido: fileObj.dataUrl");
   const db = await openDB();
-  const key = `${tech}|${month}`;
+  const key = `${cleanTech}|${cleanMonth}`;
   return new Promise((resolve, reject) => {
     const store = tx(db, "monthlyFiles", "readwrite");
-    const req = store.put({ key, tech, month, ...fileObj });
+    const req = store.put({ key, tech: cleanTech, month: cleanMonth, ...cleanFileObj });
     req.onsuccess = () => resolve(true);
     req.onerror = () => reject(req.error);
   });
@@ -166,11 +195,14 @@ export async function dbGetMonthlyFile(tech, month){
 
 /* Monthly header */
 export async function dbPutMonthlyHeader(tech, month, header){
+  const cleanTech = requireNonEmptyString(tech, "tech");
+  const cleanMonth = requireNonEmptyString(month, "month");
+  const cleanHeader = requireObject(header || {}, "header");
   const db = await openDB();
-  const key = `${tech}|${month}`;
+  const key = `${cleanTech}|${cleanMonth}`;
   return new Promise((resolve, reject)=>{
     const store = tx(db, "monthlyHeader", "readwrite");
-    const req = store.put({ key, tech, month, ...header, updatedAt: Date.now() });
+    const req = store.put({ key, tech: cleanTech, month: cleanMonth, ...cleanHeader, updatedAt: Date.now() });
     req.onsuccess = ()=> resolve(true);
     req.onerror = ()=> reject(req.error);
   });
